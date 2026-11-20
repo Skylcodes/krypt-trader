@@ -45,6 +45,8 @@ export interface TraderConfig {
   allowedCategories: string[] | null;
   allowedWhaleCategories: string[] | null;
   allowedMomentumCategories: string[] | null;
+  /** Kalshi ticker/series prefixes the main bot must not open. Empty = no filter. Not used by 15m. */
+  excludedMarketPrefixes: string[];
   contrarianOnly: boolean;
 
   sizingMode: 'percent' | 'fixed';

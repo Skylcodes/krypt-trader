@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Any
 
+import market_exclude
 import rules
 
 
@@ -31,6 +32,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "allowed_categories": None,
     "allowed_whale_categories": None,
     "allowed_momentum_categories": None,
+    "excluded_market_prefixes": list(market_exclude.DEFAULT_EXCLUDED_MARKET_PREFIXES),
     "contrarian_only": True,
 
     "sizing_mode": "percent",
@@ -535,6 +537,9 @@ def _validate_config(cfg: dict[str, Any]) -> dict[str, Any]:
     cfg["max_entry_slippage_cents"] = _clampi(cfg.get("max_entry_slippage_cents"), 0, 99, d["max_entry_slippage_cents"])
     cfg["min_market_volume"] = _clampf(cfg.get("min_market_volume"), 0.0, 1e12, d["min_market_volume"])
     cfg["max_trade_age_min"] = _clampi(cfg.get("max_trade_age_min"), 1, 1440, d["max_trade_age_min"])
+    cfg["excluded_market_prefixes"] = market_exclude.normalize_excluded_prefixes(
+        cfg.get("excluded_market_prefixes", d["excluded_market_prefixes"]),
+    )
     cfg["auto_upgrade_api_level"] = bool(cfg.get("auto_upgrade_api_level", True))
     cfg["crypto15m_live"] = bool(cfg.get("crypto15m_live", False))
     cfg["crypto15m_order_size"] = _clampi(cfg.get("crypto15m_order_size"), 1, 10_000, d["crypto15m_order_size"])
