@@ -42,7 +42,18 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
+          # Must stay on a standard (GIL) CPython — free-threaded wheels
+          # (abi3t / python3t.dll) break the frozen backend selftest on Windows.
           python-version: '3.11'
+          architecture: 'x64'
+
+      - name: Confirm build Python (not free-threaded)
+        shell: bash
+        run: |
+          python -c "import sys,sysconfig; print(sys.version); assert not (sysconfig.get_config_var('Py_GIL_DISABLED') or 0)"
+          # Prefer PATH `python` over the Windows `py -3` launcher in build scripts.
+          which python
+          python -c "import sys; print(sys.executable)"
 
       - name: Install Node dependencies
         run: npm ci
