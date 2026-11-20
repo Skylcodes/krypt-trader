@@ -10,6 +10,7 @@ from typing import Optional
 
 import crypto15m
 import db
+import market_exclude
 from kalshi_api import shard_name as get_shard_name
 from kalshi_api import (
     KalshiAPIError, cancel_order, fetch_market, find_order_by_client_id,
@@ -238,6 +239,17 @@ def _enrich_close_time(conn, sig: dict) -> None:
 def should_trade(signal: dict, source: str, cfg: dict) -> tuple[bool, str]:
     if (signal.get("ticker") or "").split("-")[0] in _CRYPTO15M_SERIES:
         return False, "crypto15m series (owned by the 15m executor)"
+
+    # Prefix denylist for the main bot only. crypto15m_trader never consults
+    # this list; the early return above also keeps 15m series out of here.
+    skip = market_exclude.exclusion_skip_reason(
+        signal.get("ticker") or "",
+        cfg,
+        event_ticker=str(signal.get("event_ticker") or signal.get("eventTicker") or ""),
+        series_ticker=str(signal.get("series_ticker") or signal.get("seriesTicker") or ""),
+    )
+    if skip:
+        return False, skip
 
     conf = float(signal.get("confidence") or 0.0)
     edge = _net_edge(signal, source, cfg)

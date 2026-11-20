@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   AlertTriangle, Banknote, Bitcoin, Cloud, Compass, Dices, Film, Globe2, PlayCircle, Power, RotateCcw, Save,
   Trophy, Vote,
@@ -612,6 +612,12 @@ export function SettingsPage() {
                 onChange={(v) => void update('minEntryPriceFrac', v)} />
             </Field>
           </div>
+          <div className="mt-4 border-t border-krypt-border pt-4">
+            <ExcludedMarketsField
+              value={config.excludedMarketPrefixes ?? []}
+              onChange={(v) => void update('excludedMarketPrefixes', v)}
+            />
+          </div>
         </Card>
       </Section>
 
@@ -849,6 +855,57 @@ function Field({
       {children}
       {hint && <p className="krypt-help">{hint}</p>}
     </div>
+  );
+}
+
+function parseExcludedPrefixes(text: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of text.split(/[\s,]+/)) {
+    const p = part.trim().toUpperCase();
+    if (!p || seen.has(p)) continue;
+    if (p.length > 64 || !/^[A-Z0-9_-]+$/.test(p)) continue;
+    seen.add(p);
+    out.push(p);
+    if (out.length >= 200) break;
+  }
+  return out;
+}
+
+function ExcludedMarketsField({
+  value, onChange,
+}: { value: string[]; onChange: (v: string[]) => void }) {
+  const [local, apply] = useOptimisticValue(value, onChange);
+  const serialized = local.join('\n');
+  const [draft, setDraft] = useState(serialized);
+  useEffect(() => { setDraft(serialized); }, [serialized]);
+
+  const commit = (text: string): void => {
+    const next = parseExcludedPrefixes(text);
+    setDraft(next.join('\n'));
+    apply(next);
+  };
+
+  return (
+    <Field
+      label="Excluded markets"
+      hint="Kalshi ticker prefixes the main whale/momentum bot will skip (case-insensitive). One per line or comma-separated. Empty = no filtering. Does not affect the 15-minute crypto runner / Multi-Run."
+    >
+      <textarea
+        className="krypt-input mt-1 min-h-[88px] w-full font-mono text-xs"
+        value={draft}
+        spellCheck={false}
+        data-testid="excluded-market-prefixes"
+        onBlur={(e) => commit(e.target.value)}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder={'KXNBA\nKXNCAAMB\nKXBTCD\nKXBTC'}
+      />
+      <p className="krypt-help mt-1">
+        {local.length === 0
+          ? 'No prefixes — main bot may trade any market that passes the other gates.'
+          : `${local.length} prefix${local.length === 1 ? '' : 'es'} active.`}
+      </p>
+    </Field>
   );
 }
 

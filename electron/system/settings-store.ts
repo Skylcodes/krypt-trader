@@ -38,6 +38,7 @@ export const DEFAULT_CONFIG: TraderConfig = {
   allowedCategories: null,
   allowedWhaleCategories: null,
   allowedMomentumCategories: null,
+  excludedMarketPrefixes: ['KXNBA', 'KXNCAAMB', 'KXBTCD', 'KXBTC'],
   contrarianOnly: true,
 
   sizingMode: 'percent',

@@ -1,7 +1,7 @@
 {
   "name": "krypt-trader",
   "productName": "Krypt Trader",
-  "version": "6.4.0",
+  "version": "6.4.0-sky.1",
   "description": "A free desktop app for Kalshi: connect your own AI agent (MCP or HTTP API) to research, forecast and trade, start on Paper (real order books, imaginary money) and go Live only when you choose, plus a manual trading terminal for any market.",
   "main": "dist-electron/main.js",
   "author": {
@@ -9,13 +9,13 @@
     "email": "hi@krypt.cc",
     "url": "https://krypt.cc"
   },
-  "homepage": "https://krypt.cc/tools/trader",
+  "homepage": "https://github.com/Skylcodes/krypt-trader",
   "repository": {
     "type": "git",
-    "url": "https://github.com/scripflipped/krypt-trader.git"
+    "url": "https://github.com/Skylcodes/krypt-trader.git"
   },
   "bugs": {
-    "url": "https://github.com/scripflipped/krypt-trader/issues"
+    "url": "https://github.com/Skylcodes/krypt-trader/issues"
   },
   "license": "MIT",
   "private": true,

@@ -89,6 +89,7 @@ LIVE = frozenset({
 SETTINGS = frozenset({
     "allowed_categories", "allowed_momentum_categories",
     "allowed_momentum_signal_types", "allowed_whale_categories",
+    "excluded_market_prefixes",
     "contrarian_only", "cross_spread_fallback_offset",
     "crypto15m_arb_detect", "crypto15m_arb_min_edge_cents", "crypto15m_assets",
     "crypto15m_direction_mode", "crypto15m_entry_diff", "crypto15m_entry_max",

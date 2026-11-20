@@ -106,14 +106,14 @@ different problem: packaging broke its signature, and macOS reported it as
 ## Build from source
 
 ```bash
-git clone https://github.com/scripflipped/krypt-trader.git
+git clone https://github.com/Skylcodes/krypt-trader.git
 cd krypt-trader
 npm install
 npm run dev      # auto-creates python/.venv on first run (~30s)
 npm run dist     # build the installer for your OS into /release
 ```
 
-Requires [Node.js](https://nodejs.org) 18+ and [Python](https://python.org) 3.11+ on PATH. Development runs on macOS, Linux and Windows. `npm run dist` builds the installer for the OS you're on. CI builds Windows, Linux (AppImage/deb) and macOS (dmg, both architectures) installers and attaches them to each GitHub Release.
+Requires [Node.js](https://nodejs.org) 18+ and [Python](https://python.org) 3.11+ on PATH. Development runs on macOS, Linux and Windows. `npm run dist` builds the installer for the OS you're on. CI on this fork builds the Windows NSIS installer and attaches it to each GitHub Release (`v*` tags).
 
 ## Need a Kalshi account?
 
