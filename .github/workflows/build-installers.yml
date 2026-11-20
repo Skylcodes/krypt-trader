@@ -28,10 +28,13 @@ jobs:
         include:
           - os: windows-latest
             name: windows
+            python_arch: x64
           - os: macos-latest
             name: mac-apple-silicon   # arm64 .dmg + .zip
+            python_arch: arm64
           - os: macos-15-intel
             name: mac-intel           # x64 .dmg + .zip
+            python_arch: x64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -56,8 +59,9 @@ jobs:
         with:
           # Standard (GIL) CPython only — free-threaded abi3t wheels break the
           # frozen backend selftest on Windows and are not used for mac either.
+          # Match runner CPU: arm64 on macos-latest, x64 on Intel/Windows.
           python-version: '3.11'
-          architecture: 'x64'
+          architecture: ${{ matrix.python_arch }}
 
       - name: Confirm build Python (not free-threaded)
         shell: bash
@@ -65,6 +69,14 @@ jobs:
           python -c "import sys,sysconfig,platform; print(sys.version); print('machine=', platform.machine()); assert not (sysconfig.get_config_var('Py_GIL_DISABLED') or 0)"
           which python
           python -c "import sys; print(sys.executable)"
+          # Guard against cryptography>=49 on Intel (no universal2 wheel →
+          # Homebrew OpenSSL source build → PyInstaller libssl mismatch).
+          python - <<'PY'
+          import platform, sys
+          print("platform=", platform.platform())
+          if sys.platform == "darwin" and platform.machine() == "x86_64":
+              print("Intel mac: cryptography must resolve to a universal2 wheel (<49)")
+          PY
 
       - name: Install Node dependencies
         run: npm ci
@@ -76,6 +88,10 @@ jobs:
           # afterPack (mac-adhoc-sign.cjs) applies an ad-hoc seal on macOS so
           # Apple Silicon does not refuse the bundle as "damaged".
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          # If cryptography ever falls back to a source build on macOS, link
+          # OpenSSL the way official wheels do (static) so PyInstaller cannot
+          # ship a mismatched Homebrew libssl.3.dylib.
+          OPENSSL_STATIC: "1"
 
       - name: Verify macOS ad-hoc signature
         if: startsWith(matrix.os, 'macos')
@@ -104,7 +120,7 @@ jobs:
             - **appId / productName unchanged** (`cc.krypt.trader` / `Krypt Trader`) so installing over an existing install keeps settings, API keys and local data.
             - **No auto-updater**: upstream never shipped `electron-updater`; repo metadata points at Skylcodes/krypt-trader.
             - **Windows**: unsigned NSIS installer — expect SmartScreen on first run.
-            - **macOS**: separate **arm64** (Apple Silicon) and **x64** (Intel) DMGs/ZIPs. Each bundles a native Python backend (PyInstaller). Ad-hoc signed, **not notarized**.
+            - **macOS**: separate **arm64** (Apple Silicon) and **x64** (Intel) DMGs/ZIPs. Each bundles a native Python backend (PyInstaller) built on that runner — not copied from Windows. Ad-hoc signed, **not notarized** (identity null / CSC_IDENTITY_AUTO_DISCOVERY=false).
 
             ### First open on macOS
             1. Download the DMG matching your chip (`arm64` for M1/M2/M3/M4, `x64` for Intel).
