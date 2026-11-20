@@ -1,5 +1,10 @@
 httpx>=0.28.0
-cryptography>=42.0.0
+# cryptography 49+ dropped macOS Intel / universal2 wheels (arm64-only).
+# On macos-15-intel that forces a Homebrew-OpenSSL source build; PyInstaller
+# then ships a mismatched libssl and the frozen selftest dies with
+# Symbol not found: _SSL_get0_group_name. Cap below 49 so Intel gets the
+# last universal2 wheel (static OpenSSL).
+cryptography>=42.0.0,<49
 websockets>=12.0
 # Explicit, though httpx already pulls it in: ws_ssl.py builds the WebSocket
 # SSL context from this bundle because a frozen macOS build has no usable
