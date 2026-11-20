@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Exactly the lockfile's tree; fails if it drifted from package.json.
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      # The renderer suite. Missing from CI until v6, so a vitest regression
+      # could land on main while the local `npm run test:all` gate was red.
+      - name: Renderer tests (vitest)
+        run: npm test
+
+      - name: Install Python test dependencies
+        run: pip install -r python/requirements-dev.txt
+
+      - name: Run Python tests
+        working-directory: python
+        run: python -m pytest -q
