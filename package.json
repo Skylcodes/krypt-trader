@@ -1,7 +1,7 @@
 {
   "name": "krypt-trader",
   "productName": "Krypt Trader",
-  "version": "6.4.0-sky.1",
+  "version": "6.4.0-sky.2",
   "description": "A free desktop app for Kalshi: connect your own AI agent (MCP or HTTP API) to research, forecast and trade, start on Paper (real order books, imaginary money) and go Live only when you choose, plus a manual trading terminal for any market.",
   "main": "dist-electron/main.js",
   "author": {
@@ -116,11 +116,16 @@
     },
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "icon": "build/icon.png",
       "category": "public.app-category.finance",
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "notarize": false
     },
     "nsis": {
       "oneClick": false,
