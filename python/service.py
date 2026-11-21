@@ -120,6 +120,7 @@ import ai_analyst
 import forecast_ledger
 import paper_book
 import paper_exchange
+import market_exclude
 import mcp_server
 import mcp_agents
 import mcp_workbench
@@ -2433,7 +2434,31 @@ async def _h_ai_analyze(p: dict) -> dict:
     if not ticker:
         raise ValueError("ticker required")
     cfg = merge_with_defaults(dict(STATE.cfg or {}))
+    # Refuse BEFORE any Kalshi fetch or billed LLM call — excluded markets
+    # must not burn Anthropic/OpenAI tokens.
+    skip = market_exclude.exclusion_skip_reason(ticker, cfg)
+    if skip:
+        logger.info(f"[ai] refused analyse for {ticker}: {skip}")
+        return {
+            "ok": False,
+            "error": (
+                f"{ticker} is on your Excluded markets list ({skip}). "
+                f"Clear or edit Settings → Excluded markets to analyse it."
+            ),
+            "excluded": True,
+        }
     detail = await terminal.market_detail(ticker, authed=STATE.auth_ok)
+    skip = market_exclude.exclusion_skip_reason_for_row(detail, cfg)
+    if skip:
+        logger.info(f"[ai] refused analyse for {ticker}: {skip}")
+        return {
+            "ok": False,
+            "error": (
+                f"{ticker} is on your Excluded markets list ({skip}). "
+                f"Clear or edit Settings → Excluded markets to analyse it."
+            ),
+            "excluded": True,
+        }
     try:
         analysis = await asyncio.to_thread(ai_analyst.analyze, detail, cfg)
     except ai_analyst.AiError as e:

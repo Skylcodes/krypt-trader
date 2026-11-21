@@ -1128,15 +1128,31 @@ async def t_move_funds(args: dict, ctx: dict) -> dict:
     return {"ok": True, **res}
 
 
+def _cfg() -> dict:
+    return HOOKS.get_cfg() or {}
+
+
+def _filter_excluded_markets(rows: list, cfg: Optional[dict] = None) -> tuple[list, int]:
+    """Drop Settings → Excluded markets before an agent spends a turn on them."""
+    import market_exclude
+    return market_exclude.drop_excluded_rows(rows or [], cfg if cfg is not None else _cfg())
+
+
 async def t_discover(args: dict, _ctx: dict) -> dict:
     import terminal
     column = _s(args, "column") or "trending"
     if column not in ("trending", "closing", "new", "volume"):
         raise ToolError("column must be trending, closing, new or volume")
     limit = max(1, min(int(args.get("limit") or 25), 50))
-    res = await terminal.discover(column, limit=limit)
-    return {"column": column, "note": res.get("note"),
-            "markets": [_compact(r) for r in res.get("rows") or []]}
+    # Over-fetch then strip excluded so the agent still sees ~limit usable rows.
+    res = await terminal.discover(column, limit=min(50, limit + 25))
+    kept, dropped = _filter_excluded_markets(res.get("rows") or [])
+    note = res.get("note") or ""
+    if dropped:
+        extra = f"{dropped} excluded by Settings → Excluded markets."
+        note = f"{note} {extra}".strip() if note else extra
+    return {"column": column, "note": note,
+            "markets": [_compact(r) for r in kept[:limit]]}
 
 
 async def t_search(args: dict, _ctx: dict) -> dict:
@@ -1145,23 +1161,41 @@ async def t_search(args: dict, _ctx: dict) -> dict:
     if len(q) < 2:
         raise ToolError("query must be at least 2 characters")
     limit = max(1, min(int(args.get("limit") or 25), 50))
-    res = await terminal.search(q, limit=limit)
-    return {"query": q, "note": res.get("note"),
-            "markets": [_compact(r) for r in res.get("rows") or []]}
+    res = await terminal.search(q, limit=min(50, limit + 25))
+    kept, dropped = _filter_excluded_markets(res.get("rows") or [])
+    note = res.get("note") or ""
+    if dropped:
+        extra = f"{dropped} excluded by Settings → Excluded markets."
+        note = f"{note} {extra}".strip() if note else extra
+    return {"query": q, "note": note,
+            "markets": [_compact(r) for r in kept[:limit]]}
 
 
 async def t_market(args: dict, _ctx: dict) -> str:
     """The same rendering the in-app analyst reads: absent fields are "--",
     every price carries its source, and the resolution rules are included."""
     import ai_analyst
+    import market_exclude
     import terminal
     ticker = _s(args, "ticker").upper()
     if not ticker:
         raise ToolError("ticker required")
+    skip = market_exclude.exclusion_skip_reason(ticker, _cfg())
+    if skip:
+        raise ToolError(
+            f"{ticker} is on the user's Excluded markets list ({skip}). "
+            f"Do not analyse it — pick a different market."
+        )
     try:
         detail = await terminal.market_detail(ticker, authed=HOOKS.is_authed())
     except RuntimeError as e:
         raise ToolError(str(e))
+    skip = market_exclude.exclusion_skip_reason_for_row(detail, _cfg())
+    if skip:
+        raise ToolError(
+            f"{ticker} is on the user's Excluded markets list ({skip}). "
+            f"Do not analyse it — pick a different market."
+        )
     return ("A field shown as -- is ABSENT (nobody published it), not zero. "
             "Prices are cents = implied probability.\n\n"
             + ai_analyst.render_market(detail))
@@ -1222,6 +1256,7 @@ async def t_portfolio(_args: dict, ctx: dict) -> dict:
 
 
 async def t_forecast(args: dict, ctx: dict) -> dict:
+    import market_exclude
     ticker = _s(args, "ticker").upper()
     try:
         fv = float(args.get("fair_value_cents"))
@@ -1234,9 +1269,21 @@ async def t_forecast(args: dict, ctx: dict) -> dict:
     if len(rationale) < 20:
         raise ToolError("Give a rationale (at least a sentence): what drives your "
                         "number and what the resolution rules require.")
+    skip = market_exclude.exclusion_skip_reason(ticker, _cfg())
+    if skip:
+        raise ToolError(
+            f"{ticker} is on the user's Excluded markets list ({skip}). "
+            f"Do not forecast or trade it."
+        )
     m = await _market_row(ticker)
     if not m:
         raise ToolError(f"Kalshi has no market called {ticker}.")
+    skip = market_exclude.exclusion_skip_reason_for_row(m, _cfg())
+    if skip:
+        raise ToolError(
+            f"{ticker} is on the user's Excluded markets list ({skip}). "
+            f"Do not forecast or trade it."
+        )
     status = (m.get("status") or "").lower()
     if status in _DEAD_STATUSES:
         raise ToolError(f"{ticker} is {status}; a forecast now would be scored "
@@ -1324,6 +1371,7 @@ async def vet(args: dict, cfg: dict, mode: str, forecast_grace: float = 0.0,
     A vet is only a promise while nothing else spends in between: place and
     decide hold _money_lock() from this call until the order is sent and
     recorded. preview_order does not, because it spends nothing."""
+    import market_exclude
     import terminal
     if agent is None:
         agent = mcp_agents.get(cfg, DEFAULT_AGENT)
@@ -1361,6 +1409,17 @@ async def vet(args: dict, cfg: dict, mode: str, forecast_grace: float = 0.0,
     if v.blockers:
         return v
 
+    # Buys on excluded prefixes are refused before book/forecast work so
+    # Autopilot cannot spend steps (or the user's AI budget) chasing them.
+    # Sells of an already-open position stay allowed so the agent can exit.
+    if action == "buy":
+        skip = market_exclude.exclusion_skip_reason(ticker, cfg)
+        if skip:
+            v.blockers.append(
+                f"{ticker} is on the user's Excluded markets list ({skip})."
+            )
+            return v
+
     try:
         v.market = await _market_row(ticker)
     except Exception as e:
@@ -1368,6 +1427,13 @@ async def vet(args: dict, cfg: dict, mode: str, forecast_grace: float = 0.0,
     if not v.market:
         v.blockers.append(f"Could not read market {ticker} from Kalshi.")
         return v
+    if action == "buy":
+        skip = market_exclude.exclusion_skip_reason_for_row(v.market, cfg)
+        if skip:
+            v.blockers.append(
+                f"{ticker} is on the user's Excluded markets list ({skip})."
+            )
+            return v
     status = (v.market.get("status") or "").lower()
     if status and status not in _TRADABLE_STATUSES:
         v.blockers.append(f"{ticker} is {status}, not open for trading.")
@@ -2122,18 +2188,27 @@ edge on each side AFTER Kalshi's fee.
 Most markets should end at step 3 with no trade: a liquid market's price is a \
 strong forecast, and fees eat small edges. Every forecast is scored against the \
 market once it settles (get_scoreboard). Paper fills are real-book, \
-imaginary-money, immediate-or-cancel. Never invent a number you could not justify."""
+imaginary-money, immediate-or-cancel. Never invent a number you could not justify.
+
+Respect Excluded markets from Settings: those prefixes are omitted from \
+discover/search and refused by get_market / record_forecast / place_order. \
+Do not spend tool calls retrying them."""
 
 
 def instructions_for(ctx: dict, cfg: Optional[dict] = None) -> str:
     """INSTRUCTIONS, plus — for one of the user's customised agents — who it
     is, the user's guide and a plain summary of its hard rules, so it does
     not spend calls on orders that will be refused."""
+    import market_exclude
     cfg = cfg if cfg is not None else HOOKS.get_cfg()
     agent = _agent(ctx, cfg)
+    base = INSTRUCTIONS
+    note = market_exclude.exclusion_prompt_note(cfg or {})
+    if note:
+        base = base + note
     if agent is None:
-        return INSTRUCTIONS
-    return mcp_agents.instructions(INSTRUCTIONS, agent, _agent_rails(cfg, agent),
+        return base
+    return mcp_agents.instructions(base, agent, _agent_rails(cfg, agent),
                                    _agent_mode(cfg, agent))
 
 

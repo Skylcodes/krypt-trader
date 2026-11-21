@@ -90,6 +90,9 @@ def rig(monkeypatch):
     kalshi_auth.set_env("production")
     st = {"cfg": {"account_mode": "live", "mcp_enabled": True, "mcp_http_enabled": True, "mcp_trade_mode": "paper",
                   "mcp_min_edge_cents": 0.0,
+                  # Agent-rule fixtures use KXNBA/KXBTC tickers; clear the Sky
+                  # denylist so those tests exercise agent rules, not exclusion.
+                  "excluded_market_prefixes": [],
                   "mcp_agents": [{"id": "default", "name": "Default"}, dict(SAM), dict(RES)]},
           "sent": [], "fills": {}, "events": [], "phone": []}
 

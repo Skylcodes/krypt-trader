@@ -284,8 +284,15 @@ class _Run:
         self.budget_left = self.lim["dailyTokenBudget"] - usage_today()["tokens"]
 
     def system(self) -> str:
+        import market_exclude
         mission = str(self.cfg.get("autopilot_mission") or "").strip() or DEFAULT_MISSION
-        text = SYSTEM.format(instructions=mcp_server.INSTRUCTIONS,
+        # Bake Excluded markets into the first system turn so the model does
+        # not spend billed steps discovering markets it cannot trade.
+        instructions = (
+            mcp_server.INSTRUCTIONS
+            + market_exclude.exclusion_prompt_note(self.cfg)
+        )
+        text = SYSTEM.format(instructions=instructions,
                              max_steps=self.lim["maxSteps"], mission=mission)
         agent = run_agent(self.cfg)
         if agent is not None and mcp_server.mcp_agents.is_customised(agent):
