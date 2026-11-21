@@ -37,3 +37,32 @@ describe('excludedMarketPrefixes defaults', () => {
     expect(out.excludedMarketPrefixes).toEqual([]);
   });
 });
+
+describe('excludedMarketPrefixes UI parse', () => {
+  // Mirror Settings.parseExcludedPrefixes — blanks must never become ''
+  // (JS 'ANY'.startsWith('') === true would match every market).
+  function parseExcludedPrefixes(text: string): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const part of text.split(/[\s,]+/)) {
+      const p = part.trim().toUpperCase();
+      if (!p || seen.has(p)) continue;
+      if (p.length > 64 || !/^[A-Z0-9_-]+$/.test(p)) continue;
+      seen.add(p);
+      out.push(p);
+      if (out.length >= 200) break;
+    }
+    return out;
+  }
+
+  it('drops blanks, whitespace and junk; uppercases', () => {
+    expect(parseExcludedPrefixes('  \n, ,\tkxnba\nKXNBA\nbad!prefix\nKX_OK')).toEqual([
+      'KXNBA', 'KX_OK',
+    ]);
+  });
+
+  it('empty / whitespace-only text yields no prefixes (no match-all)', () => {
+    expect(parseExcludedPrefixes('')).toEqual([]);
+    expect(parseExcludedPrefixes('   \n\t  ')).toEqual([]);
+  });
+});

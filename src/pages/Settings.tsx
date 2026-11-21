@@ -889,7 +889,7 @@ function ExcludedMarketsField({
   return (
     <Field
       label="Excluded markets"
-      hint="Kalshi ticker prefixes the main whale/momentum bot will skip (case-insensitive). One per line or comma-separated. Empty = no filtering. Does not affect the 15-minute crypto runner / Multi-Run."
+      hint="Kalshi ticker prefixes the whale/momentum bot, Autopilot, MCP agents and panel AI Analyse will skip (case-insensitive). One per line or comma-separated. Empty = no filtering. Does not affect the 15-minute crypto runner / Multi-Run."
     >
       <textarea
         className="krypt-input mt-1 min-h-[88px] w-full font-mono text-xs"
