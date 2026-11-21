@@ -935,7 +935,13 @@ export interface AutopilotStatus {
   nextRunAt: string | null;
   blockedReason: string | null;
   today: { runs: number; tokens: number; costUsd: number | null };
-  limits: { intervalMin: number; maxRunsPerDay: number; dailyTokenBudget: number; maxSteps: number };
+  limits: {
+    intervalMin: number;
+    maxRunsPerDay: number;
+    dailyTokenBudget: number;
+    maxTokensPerRun: number;
+    maxSteps: number;
+  };
   provider: string;
   providerLabel?: string;
   model: string;

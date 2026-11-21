@@ -10,9 +10,9 @@ describe('budget presets', () => {
   it('map to the documented numbers', () => {
     expect(BUDGETS.map((b) => [b.id, b.intervalMin, b.maxRunsPerDay, b.dailyTokenBudget, b.maxSteps]))
       .toEqual([
-        ['light', 240, 3, 300_000, 8],
-        ['standard', 120, 6, 1_000_000, 12],
-        ['heavy', 60, 12, 3_000_000, 20],
+        ['light', 240, 3, 150_000, 8],
+        ['standard', 120, 6, 250_000, 12],
+        ['heavy', 60, 12, 750_000, 20],
       ]);
   });
 
@@ -22,6 +22,7 @@ describe('budget presets', () => {
       expect(p.autopilotIntervalMin).toBe(b.intervalMin);
       expect(p.autopilotMaxRunsPerDay).toBe(b.maxRunsPerDay);
       expect(p.autopilotDailyTokenBudget).toBe(b.dailyTokenBudget);
+      expect(p.autopilotMaxTokensPerRun).toBe(80_000);
       expect(p.autopilotMaxSteps).toBe(b.maxSteps);
       expect(b.maxRunsPerDay * b.intervalMin).toBeLessThanOrEqual(24 * 60);
     }
@@ -64,8 +65,8 @@ describe('the patch never writes live', () => {
     const p = buildQuickstartPatch({ provider: 'anthropic', model: '', mission: 'x', budget: byId('standard') });
     expect(Object.keys(p).sort()).toEqual([
       'aiModel', 'aiProvider', 'autopilotAgentId', 'autopilotDailyTokenBudget', 'autopilotEnabled',
-      'autopilotIntervalMin', 'autopilotMaxRunsPerDay', 'autopilotMaxSteps', 'autopilotMission',
-      'mcpTradeMode',
+      'autopilotIntervalMin', 'autopilotMaxRunsPerDay', 'autopilotMaxSteps', 'autopilotMaxTokensPerRun',
+      'autopilotMission', 'mcpTradeMode',
     ]);
     expect(p).not.toHaveProperty('mcpAgents');
   });
@@ -109,7 +110,7 @@ describe('cost estimate', () => {
   it('says free for local, a number only where a price is published, and never guesses', () => {
     expect(costLine({ provider: 'ollama', model: 'x', budget: byId('heavy') })).toMatch(/^Free/);
     expect(costLine({ provider: 'anthropic', model: 'claude-sonnet-5', budget: byId('standard'), prices }))
-      .toMatch(/\$2\.80/);
+      .toMatch(/\$0\.70/);
     const unpriced = costLine({ provider: 'openai', model: 'gpt-5.5', budget: byId('standard'), prices });
     expect(unpriced).not.toMatch(/\$/);
     expect(unpriced).toMatch(/depends on your provider/);

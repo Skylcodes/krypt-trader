@@ -114,6 +114,11 @@ MICRO_MARKET_FILTERS = [
     "KXHIGHNY", "KXLOWNY", "KXHIGHCHI", "KXLOWCHI",
     "KXHIGHLA", "KXLOWLA", "KXHIGHDC", "KXLOWDC",
     "KXRAIN", "KXSNOW", "KXWIND",
+    # Parlay / multi-leg "MVE" products. The terminal already hides KXMVE*
+    # from sweeps; whale/momentum must not score them either — they print
+    # huge notional with near-random implied prices and burn trade cycles
+    # on net-edge rejects (e.g. KXMVECROSSCATEGORY).
+    "KXMVE",
 ]
 
 

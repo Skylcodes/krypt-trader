@@ -84,6 +84,34 @@ def test_scan_whales_keeps_valid_no_side(fresh_db, monkeypatch):
     assert rows[0]["dollar_value"] == pytest.approx(3000.0)
 
 
+def test_scan_whales_skips_kxmve_parlay_prints(fresh_db, monkeypatch):
+    """Cross-category MVE parlays print huge notional but are not whale signals."""
+    from categorize import is_micro_market
+    assert is_micro_market("KXMVECROSSCATEGORY-FOO")
+    # Use "no" so entry price is 0.60 (>= min_entry_price_frac 0.50).
+    _stub_network(monkeypatch, [
+        _tape_trade("t-mve", "no", ticker="KXMVECROSSCATEGORY-ABC"),
+        _tape_trade("t-real", "no", ticker="KXATPCHALLENGERMATCH-KWON"),
+    ])
+    n, rows = run_async(scanner.scan_whales(WHALE_CFG))
+    assert n == 1
+    assert rows[0]["ticker"] == "KXATPCHALLENGERMATCH-KWON"
+
+
+def test_scan_momentum_survives_none_tape(fresh_db, monkeypatch):
+    """Regression: Nov 20 log — fetch_recent_trades returned None and crashed."""
+    monkeypatch.setattr(kalshi_ws, "recent_trades", lambda limit=1000: None)
+
+    async def _none_tape(limit=1000):
+        return None
+
+    monkeypatch.setattr(kalshi_api, "fetch_recent_trades", _none_tape)
+    with db.get_db() as conn:
+        db.upsert_market(conn, _market_row(0.55))
+    n, alerts = run_async(scanner.scan_momentum(MOM_CFG))
+    assert n == 0 and alerts == []
+
+
 
 
 MOM_CFG = {

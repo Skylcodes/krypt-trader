@@ -464,6 +464,11 @@ async def scan_momentum(cfg: dict) -> tuple[int, list[dict]]:
     recent_trades = kalshi_ws.recent_trades(limit=1000)
     if recent_trades is None:
         recent_trades = await kalshi_api.fetch_recent_trades(limit=1000)
+    # fetch_recent_trades can also return None (network blip / empty body).
+    # Whale scan already treats that as "no tape"; momentum used to crash with
+    # "'NoneType' object is not iterable".
+    if not recent_trades:
+        recent_trades = []
     max_age = _max_trade_age_sec(cfg)
     now_utc = datetime.now(timezone.utc)
     trades_by_ticker: dict[str, list[dict]] = defaultdict(list)

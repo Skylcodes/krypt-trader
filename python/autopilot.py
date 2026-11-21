@@ -162,8 +162,9 @@ def _limits(cfg: dict) -> dict:
     return {
         "intervalMin": int(cfg.get("autopilot_interval_min") or 60),
         "maxRunsPerDay": int(cfg.get("autopilot_max_runs_per_day") or 12),
-        "dailyTokenBudget": int(cfg.get("autopilot_daily_token_budget") or 1_500_000),
-        "maxSteps": int(cfg.get("autopilot_max_steps") or 15),
+        "dailyTokenBudget": int(cfg.get("autopilot_daily_token_budget") or 250_000),
+        "maxTokensPerRun": int(cfg.get("autopilot_max_tokens_per_run") or 80_000),
+        "maxSteps": int(cfg.get("autopilot_max_steps") or 12),
     }
 
 
@@ -314,7 +315,10 @@ class _Run:
         self.cost = None if (self.cost is None or cost is None) else self.cost + cost
 
     def over_budget(self) -> bool:
-        return self.in_tok + self.out_tok >= self.budget_left
+        used = self.in_tok + self.out_tok
+        if used >= int(self.lim.get("maxTokensPerRun") or 80_000):
+            return True
+        return used >= self.budget_left
 
     async def tool(self, name: str, args: Any) -> tuple[str, bool]:
         self.steps += 1

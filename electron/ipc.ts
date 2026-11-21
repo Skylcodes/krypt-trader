@@ -1209,7 +1209,7 @@ const DIAGNOSTIC_CONFIG_KEYS = [
   'mcpAllowResearch', 'mcpAllowScripts', 'mcpAllowScriptRun', 'mcpAllowConfig',
   'mcpAllowLiveSwitches', 'mcpDailyLossUsd', 'mcpLiveApproval', 'mcpHttpEnabled',
   'autopilotEnabled', 'autopilotIntervalMin', 'autopilotMaxRunsPerDay',
-  'autopilotDailyTokenBudget', 'autopilotMaxSteps',
+  'autopilotDailyTokenBudget', 'autopilotMaxTokensPerRun', 'autopilotMaxSteps',
   'perpsFarmEnabled',
 ] as const;
 

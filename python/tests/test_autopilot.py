@@ -137,6 +137,19 @@ def test_the_daily_token_budget_stops_a_run_mid_way(env):
     assert len(FakeAnthropic.calls) == 2
 
 
+def test_the_per_run_token_cap_stops_a_run_even_with_daily_budget_left(env):
+    env["cfg"]["autopilot_daily_token_budget"] = 500_000
+    env["cfg"]["autopilot_max_tokens_per_run"] = 40_000
+    FakeAnthropic.script = [
+        NS(content=[_tool_use("get_status", {}, f"t{i}")], stop_reason="tool_use",
+           usage=_usage(25_000, 1_000)) for i in range(10)]
+    run(autopilot.run_once(_cfg(env), "manual"))
+    r = autopilot.runs(1)[0]
+    assert r["status"] == "budget"
+    assert (r["inputTokens"] or 0) + (r["outputTokens"] or 0) >= 40_000
+    assert len(FakeAnthropic.calls) == 2
+
+
 def test_runs_per_day_are_capped(env):
     env["cfg"]["autopilot_max_runs_per_day"] = 1
     assert run(autopilot.run_once(_cfg(env), "manual"))["ok"]
@@ -234,10 +247,16 @@ def test_an_agent_cannot_touch_autopilot_settings():
 def test_budget_settings_are_clamped():
     cfg = merge_with_defaults({"autopilot_interval_min": 1,
                                "autopilot_daily_token_budget": 10 ** 12,
+                               "autopilot_max_tokens_per_run": 1,
                                "autopilot_enabled": "yes"})
     assert cfg["autopilot_interval_min"] == 15
     assert cfg["autopilot_daily_token_budget"] == 50_000_000
+    assert cfg["autopilot_max_tokens_per_run"] == 10_000
     assert cfg["autopilot_enabled"] is False
+    fresh = merge_with_defaults({})
+    assert fresh["autopilot_enabled"] is False
+    assert fresh["autopilot_daily_token_budget"] == 250_000
+    assert fresh["autopilot_max_tokens_per_run"] == 80_000
 
 
 def test_deleting_the_agent_autopilot_runs_as_blocks_it_never_falls_back(env):

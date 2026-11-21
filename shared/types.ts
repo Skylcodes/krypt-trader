@@ -188,6 +188,8 @@ export interface TraderConfig {
   autopilotIntervalMin?: number;
   autopilotMaxRunsPerDay?: number;
   autopilotDailyTokenBudget?: number;
+  /** Hard cap on tokens for a single Autopilot run (input+output). */
+  autopilotMaxTokensPerRun?: number;
   autopilotMaxSteps?: number;
   autopilotMission?: string;
   autopilotAgentId?: string;

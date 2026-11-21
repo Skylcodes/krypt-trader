@@ -59,16 +59,16 @@ export function AutopilotPanel() {
   return (
     <Section
       title="Autopilot"
-      description="The app runs an agent on a schedule with your AI analysis key. It gets exactly the tools and rails a connected client would."
+      description="Opt-in. Off by default. When on, the app runs an agent on a schedule with your AI analysis key — billed against your daily and per-run token caps."
     >
       {!config?.autopilotEnabled && (
         <div className="mb-3 flex flex-col items-start gap-3 rounded-xl border border-krypt-purple/40 bg-gradient-to-r from-krypt-indigo/10 via-krypt-purple/10 to-krypt-pink/10 p-4 md:flex-row md:items-center">
           <Sparkles className="h-5 w-5 shrink-0 text-krypt-purple" />
           <div className="flex-1 text-sm">
-            <div className="font-medium text-white">New to Autopilot? Set it up in a few steps.</div>
+            <div className="font-medium text-white">Autopilot is off. Set it up only if you want scheduled AI runs.</div>
             <div className="mt-0.5 text-xs text-krypt-muted">
               Pick an AI, add its key (or use a free local one), choose a mission and a budget.
-              It starts on paper: real order books, imaginary money.
+              Defaults cap spend at 250k tokens/day and 80k per run. Starts on paper.
             </div>
           </div>
           <button type="button" className="krypt-btn-primary" onClick={() => setQuick(true)} data-testid="autopilot-quickstart-open">
@@ -147,7 +147,7 @@ export function AutopilotPanel() {
           </span>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-5">
           <div>
             <span className="krypt-label">Every</span>
             <NumberInput suffix="min" value={config?.autopilotIntervalMin ?? 60} min={15} max={1440}
@@ -161,7 +161,7 @@ export function AutopilotPanel() {
           </div>
           <div>
             <span className="krypt-label">Token budget / day</span>
-            <NumberInput value={config?.autopilotDailyTokenBudget ?? 1_500_000} min={50_000} max={50_000_000}
+            <NumberInput value={config?.autopilotDailyTokenBudget ?? 250_000} min={50_000} max={50_000_000}
               onChange={(v) => void patch({ autopilotDailyTokenBudget: Math.round(v) })} />
             <span className="krypt-hint">
               {a ? `${fmtNum(a.today.tokens)} used today` : ''}
@@ -169,8 +169,14 @@ export function AutopilotPanel() {
             </span>
           </div>
           <div>
+            <span className="krypt-label">Max tokens / run</span>
+            <NumberInput value={config?.autopilotMaxTokensPerRun ?? 80_000} min={10_000} max={500_000}
+              onChange={(v) => void patch({ autopilotMaxTokensPerRun: Math.round(v) })} />
+            <span className="krypt-hint">Stops a single runaway run</span>
+          </div>
+          <div>
             <span className="krypt-label">Tool calls per run</span>
-            <NumberInput value={config?.autopilotMaxSteps ?? 15} min={3} max={40}
+            <NumberInput value={config?.autopilotMaxSteps ?? 12} min={3} max={40}
               onChange={(v) => void patch({ autopilotMaxSteps: Math.round(v) })} />
           </div>
         </div>
@@ -237,8 +243,10 @@ export function AutopilotPanel() {
             <p>
               Every {lim?.intervalMin ?? config?.autopilotIntervalMin ?? 60} minutes the app will
               call {a?.model ?? 'your AI model'} with your own key, and you are billed for every
-              run — up to {lim?.maxRunsPerDay ?? 12} runs and {fmtNum(lim?.dailyTokenBudget ?? 1_500_000)}{' '}
-              tokens a day.
+              run — up to {lim?.maxRunsPerDay ?? 12} runs,{' '}
+              {fmtNum(lim?.dailyTokenBudget ?? config?.autopilotDailyTokenBudget ?? 250_000)} tokens
+              a day, and {fmtNum(lim?.maxTokensPerRun ?? config?.autopilotMaxTokensPerRun ?? 80_000)}{' '}
+              tokens per run.
             </p>
             <p>
               It can do exactly what your AI Agents settings allow a connected client to do: the
