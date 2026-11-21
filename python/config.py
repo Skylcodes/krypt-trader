@@ -153,8 +153,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "autopilot_enabled": False,
     "autopilot_interval_min": 60,
     "autopilot_max_runs_per_day": 12,
-    "autopilot_daily_token_budget": 1_500_000,
-    "autopilot_max_steps": 15,
+    # Conservative defaults: Autopilot is opt-in (enabled=False) and the
+    # daily/per-run token caps are meant to stop a surprise Claude bill.
+    "autopilot_daily_token_budget": 250_000,
+    "autopilot_max_tokens_per_run": 80_000,
+    "autopilot_max_steps": 12,
     "autopilot_mission": "",
     "autopilot_agent_id": "default",
     "mcp_agents": None,
@@ -674,6 +677,9 @@ def _validate_config(cfg: dict[str, Any]) -> dict[str, Any]:
     cfg["autopilot_daily_token_budget"] = _clampi(
         cfg.get("autopilot_daily_token_budget"), 50_000, 50_000_000,
         d["autopilot_daily_token_budget"])
+    cfg["autopilot_max_tokens_per_run"] = _clampi(
+        cfg.get("autopilot_max_tokens_per_run"), 10_000, 500_000,
+        d["autopilot_max_tokens_per_run"])
     cfg["autopilot_max_steps"] = _clampi(
         cfg.get("autopilot_max_steps"), 3, 40, d["autopilot_max_steps"])
     cfg["autopilot_mission"] = str(cfg.get("autopilot_mission") or "")[:2000]

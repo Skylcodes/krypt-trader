@@ -130,20 +130,21 @@ export interface BudgetPreset {
   maxRunsPerDay: number;
   dailyTokenBudget: number;
   maxSteps: number;
+  maxTokensPerRun?: number;
 }
 
 export const BUDGETS: BudgetPreset[] = [
   {
     id: 'light', label: 'Light', blurb: 'A few careful looks a day. Cheapest.',
-    intervalMin: 240, maxRunsPerDay: 3, dailyTokenBudget: 300_000, maxSteps: 8,
+    intervalMin: 240, maxRunsPerDay: 3, dailyTokenBudget: 150_000, maxSteps: 8,
   },
   {
     id: 'standard', label: 'Standard', blurb: 'Every two hours, a solid look each time.',
-    intervalMin: 120, maxRunsPerDay: 6, dailyTokenBudget: 1_000_000, maxSteps: 12,
+    intervalMin: 120, maxRunsPerDay: 6, dailyTokenBudget: 250_000, maxSteps: 12,
   },
   {
     id: 'heavy', label: 'Heavy', blurb: 'Hourly and thorough. Costs the most.',
-    intervalMin: 60, maxRunsPerDay: 12, dailyTokenBudget: 3_000_000, maxSteps: 20,
+    intervalMin: 60, maxRunsPerDay: 12, dailyTokenBudget: 750_000, maxSteps: 20,
   },
 ];
 
@@ -195,6 +196,7 @@ export function buildQuickstartPatch(args: {
     autopilotIntervalMin: clamp(args.budget.intervalMin, 15, 1440),
     autopilotMaxRunsPerDay: clamp(args.budget.maxRunsPerDay, 1, 96),
     autopilotDailyTokenBudget: clamp(args.budget.dailyTokenBudget, 50_000, 50_000_000),
+    autopilotMaxTokensPerRun: clamp(args.budget.maxTokensPerRun ?? 80_000, 10_000, 500_000),
     autopilotMaxSteps: clamp(args.budget.maxSteps, 3, 40),
     mcpTradeMode: 'paper',
     autopilotEnabled: true,
